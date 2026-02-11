@@ -1,17 +1,20 @@
 package org.jave.modulo1.firstsolution;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
 import java.util.stream.IntStream;
 
 public class Client {
-
+    private static final Logger logger = LoggerFactory.getLogger(Client.class);
     private Socket socket;
     private DataOutputStream out;
 
     public Client() {
-        out = null;
+        startSession();
     }
 
     private void sendingMessage(int number) {
@@ -31,22 +34,18 @@ public class Client {
         long finNano = System.nanoTime();
         // Calcular diferencias
         long duracionNano = finNano - inicioNano;
-        //long duracionMicro = duracionNano / Constants.MICROSEGUNDOS_CONVERSOR;
         double duracionMili = (double) duracionNano / Constants.MILISEGUNDOS_CONVERSOR;
 
-        //System.out.println("Tiempo en nanosegundos: " + duracionNano + " ns");
-        //System.out.println("Tiempo en microsegundos: " + duracionMicro + " µs");
-        System.out.printf("Tiempo en milisegundos: %.4f ms - ", duracionMili );
+        logger.info("Procesando valor: {} - Respuesta en milisegundos: {} ms", value, duracionMili );
     }
 
     private void interactWithServer() {
         IntStream.rangeClosed(1, 50).forEach(number -> {
             sendingMessage(number);
-            System.out.println("Procesando numero: " + number);
             try {
-                Thread.sleep(7000);
+                Thread.sleep(Constants.THREAD_SLEEP);
             } catch (InterruptedException e) {
-                System.err.println("El hilo fue interrumpido");
+                logger.error("El hilo fue interrumpido");
                 Thread.currentThread().interrupt();
             }
         });
@@ -54,9 +53,12 @@ public class Client {
 
     private void startSession() {
         try {
-            String HOST = "127.0.0.1";
-            int PORT = 5001;
-            socket = new Socket(HOST, PORT);
+            socket = new Socket(Constants.SERVER_HOST, Constants.SERVER_PORT);
+            socket.setTcpNoDelay(true);      // Desactiva algoritmo de Nagle
+            socket.setSoTimeout(Constants.TIMEOUT);       // Timeout controlado
+            socket.setReceiveBufferSize(Constants.BUFFER_SIZE); // Buffer pequeño
+            socket.setSendBufferSize(Constants.BUFFER_SIZE);    // Buffer pequeño para bajar el tiempo
+
             out = new DataOutputStream(socket.getOutputStream());
         } catch (IOException e) {
             //e.printStackTrace();
@@ -74,7 +76,6 @@ public class Client {
 
     public static void main(String[] args) {
         Client client = new Client();
-        client.startSession();
         client.interactWithServer();
         client.endSession();
     }
