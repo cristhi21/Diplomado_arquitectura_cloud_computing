@@ -1,13 +1,15 @@
 package org.jave.modulo1.firstsolution;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
 
 public class Server {
-    private static final int PUERTO = 5001;
-
+    private static final Logger logger = LoggerFactory.getLogger(Server.class);
     private DataInputStream in;
     private final ServerSocket serverSocket;
 
@@ -16,15 +18,14 @@ public class Server {
     }
 
     private void startServer() {
-        System.out.println("Servidor ha iniciado...");
+        logger.info("Servidor ha Iniciado...");
         try {
             Socket socketClient = this.serverSocket.accept();
             in = new DataInputStream(socketClient.getInputStream());
-            System.out.println("Se ha conectado el cliente = " + socketClient);
+            logger.info("Se ha conectado el cliente = {}", socketClient);
 
             while (!this.serverSocket.isClosed()) {
-                String receivedMessage = gettingMessage(socketClient);
-                System.out.println("Mensaje recibido: " + receivedMessage);
+                gettingMessage(socketClient);
             }
         } catch (IOException e) {
             throw new RuntimeException(e);
@@ -33,21 +34,19 @@ public class Server {
 
     private void closeConnectionServer(Socket client) throws IOException {
         client.close();
-        System.out.println("El usuario abandono");
+        logger.info("El usuario abandono");
     }
 
-    private String gettingMessage(Socket client) {
+    private void gettingMessage(Socket client) {
         try {
             // --- Bloque de código a medir ---
             String receivedMessage = getMessageFromClientAndCalculateTime();
             //
             if (receivedMessage.equals("100")) {
-                System.out.println("La conexion se cerrara, gracias");
+                logger.info("La conexión se cerrara, gracias");
                 closeConnectionServer(client);
             }
-            return receivedMessage;
         } catch (IOException e) {
-            e.printStackTrace();
             throw new RuntimeException(e);
         }
     }
@@ -60,18 +59,15 @@ public class Server {
         long finNano = System.nanoTime();
         // Calcular diferencias
         long duracionNano = finNano - inicioNano;
-        //long duracionMicro = duracionNano / Constants.MICROSEGUNDOS_CONVERSOR;
-        long duracionMili = duracionNano / Constants.MILISEGUNDOS_CONVERSOR;
+        double duracionMili = (double) duracionNano / Constants.MILISEGUNDOS_CONVERSOR;
 
-        //System.out.println("Tiempo en nanosegundos: " + duracionNano + " ns");
-        //System.out.println("Tiempo en microsegundos: " + duracionMicro + " µs");
-        System.out.println("Tiempo en milisegundos: " + duracionMili + " ms");
+        logger.info("Mensaje {} recibido - Tiempo en milisegundos: {} ms", receivedMessage, duracionMili);
         return receivedMessage;
     }
 
     public static void main(String[] args) {
         try {
-            Server server = new Server(new ServerSocket(PUERTO));
+            Server server = new Server(new ServerSocket(Constants.SERVER_PORT));
             server.startServer();
         } catch (IOException e) {
             throw new RuntimeException(e);
